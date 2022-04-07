@@ -513,6 +513,15 @@ class BIP85ChildSeedIndexView(View):
         # ret should be the bip85_index let's convert to int
         self.bip85_index = int(ret)
 
+        seed_mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
+
+        self.controller.storage.set_pending_seed(
+            Seed(mnemonic=seed_mnemonic, wordlist_language_code=wordlist_language_code)
+
+        self.seed = self.controller.storage.get_pending_seed()
+        self.seed_num = None
+
+
         return Destination(
             BIP85ChildSeedWarningView,
             view_args={"seed_num": self.seed_num, "num_words": self.num_words,
@@ -525,6 +534,11 @@ class BIP85ChildSeedWarningView(View):
         self.seed_num = seed_num
         self.num_words = num_words
         self.bip85_index = bip85_index
+
+         if self.seed_num is None:
+            self.seed = self.controller.storage.get_pending_seed()
+         else:
+            self.seed = self.controller.get_seed(self.seed_num)
 
    def run(self):
         args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_index": self.bip85_index}
@@ -572,7 +586,8 @@ class BIP85SeedWordsView(View):
 
         words_per_page = 4  # TODO: eventually make this configurable for bigger screens?
 
-        mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
+        #mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
+        mnemonic = self.seed.mnemonic_list
         words = mnemonic[self.page_index * words_per_page:(self.page_index + 1) * words_per_page]
 
         button_data = []
@@ -581,10 +596,6 @@ class BIP85SeedWordsView(View):
         else:
             button_data.append(DONE)
 
-        # Don't need this now
-        # Store the current word number and the index number selected
-        #self.seed.bip85_num_words = self.num_words
-        #self.seed.bip85_index = self.bip85_index
 
         button_data = []
         if self.page_index < self.num_pages - 1 or self.seed_num is None:
@@ -611,6 +622,10 @@ class BIP85SeedWordsView(View):
                 return Destination(BIP85SeedWordsView, view_args={"seed_num": self.seed_num, "page_index": self.page_index + 1, "num_words": self.num_words, "bip85_index": self.bip85_index})
 
         elif button_data[selected_menu_num] == DONE:
+            # Clear pending mnemonic and seed
+            self.seed.discard_pending_mnemonic()
+            self.seed.discard_pending_seed()
+
             # Must clear history to avoid BACK button returning to private info
             return Destination(SeedOptionsView, view_args={"seed_num": self.seed_num}, clear_history=True)
 
