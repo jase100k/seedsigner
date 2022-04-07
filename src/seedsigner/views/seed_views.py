@@ -346,7 +346,7 @@ class SeedOptionsView(View):
         VERIFY_ADDRESS = "Verify Addr"
         EXPORT_XPUB = "Export Xpub"
         BACKUP = ("Backup Seed", None, None, None, FontAwesomeIconConstants.CIRCLE_CHEVRON_RIGHT)
-        GENBIP85 = ("Gen BIP85 Child seed")
+        GEN_BIP85 = ("Gen BIP85 Child seed")
         DISCARD = ("Discard Seed", None, None, "red")
 
         button_data = []
@@ -378,8 +378,9 @@ class SeedOptionsView(View):
         
         if self.settings.get_value(SettingsConstants.SETTING__XPUB_EXPORT) == SettingsConstants.OPTION__ENABLED:
             button_data.append(EXPORT_XPUB)
-           
-        button_data.append(GENBIP85)
+        if self.settings.get_value(SettingsConstants.SETTING__GEN_BIP85) == SettingsConstants.OPTION__ENABLED:
+            button_data.append(GEN_BIP85)
+
         button_data.append(BACKUP)
         button_data.append(DISCARD)
 
@@ -412,7 +413,7 @@ class SeedOptionsView(View):
         elif button_data[selected_menu_num] == DISCARD:
             return Destination(SeedDiscardView, view_args={"seed_num": self.seed_num})
         
-        elif button_data[selected_menu_num] == GENBIP85:
+        elif button_data[selected_menu_num] == GEN_BIP85:
             return Destination(SeedExportBIP85View, view_args={"seed_num": self.seed_num})
 
 
