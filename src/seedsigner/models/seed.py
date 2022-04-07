@@ -5,6 +5,7 @@ from embit import bip39, bip32
 from embit.networks import NETWORKS
 from typing import List
 
+from seedsigner.helpers.bip85 import hmac_sha512
 from seedsigner.models.settings import SettingsConstants
 
 
@@ -105,14 +106,29 @@ class Seed:
     def get_fingerprint(self, network: str = SettingsConstants.MAINNET) -> str:
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
         return hexlify(root.child(0).fingerprint).decode('utf-8')
-        
+
     def get_xpub(self, wallet_path: str = '/', network: str = SettingsConstants.MAINNET):
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
         xprv = root.derive(wallet_path)
         xpub = xprv.to_public()
         return xpub
-    
-    ### override operators    
+
+
+    # Derives a BIP85 mnemonic (seed word) from the master seed words using embit functions
+    def get_bip85_child_mnemonic(self, bip85_index: int, bip85_num_words: int, network: str = SettingsConstants.MAINNET):
+        passphrase = self._passphrase
+        # TODO: Support other bip-39 wordlist languages!
+        path = "m/83696968'/39'/0'/{bip85_num_words}'/{bip85_index}'".format(bip85_num_words=bip85_num_words,
+                                                                             bip85_index=bip85_index)
+        root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
+
+        # Derive k
+        xprv = root.derive(path)
+        entropy = hmac_sha512(xprv.secret)
+        width = round(bip85_num_words / 12 * 16)
+        return bip39.mnemonic_from_bytes(entropy[:width])
+
+    ### override operators
     def __eq__(self, other):
         if isinstance(other, Seed):
             return self.seed_bytes == other.seed_bytes

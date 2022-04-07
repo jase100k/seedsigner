@@ -1439,3 +1439,17 @@ class MultisigWalletDescriptorScreen(ButtonListScreen):
             auto_line_break=True,
             allow_text_overflow=True,
         ))
+
+@dataclass
+class BIP85SeedIndexScreen(KeyboardScreen):
+    def __post_init__(self):
+        self.title = "BIP-85 Index"
+        self.user_input = ""
+
+        # Specify the keys in the keyboard
+        self.rows = 3
+        self.cols = 6
+        self.keys_charset = "0123456789"
+        self.show_save_button = True
+
+        super().__post_init__()
