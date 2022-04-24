@@ -504,7 +504,7 @@ class BIP85ChildSeedIndexView(View):
         args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_app_no" : self.bip85_app_no, "bip85_index": self.bip85_index}
 
         # Change this later to use the generic Screen input keyboard
-        ret = seed_screens.SeedExportBIP85GetIndexScreen(
+        ret = seed_screens.BIP85SeedIndexScreen(
         ).display()
 
         if ret == RET_CODE__BACK_BUTTON:
@@ -525,17 +525,11 @@ class BIP85ChildSeedWarningView(View):
         self.seed_num = seed_num
         self.num_words = num_words
         self.bip85_index = bip85_index
-        # if self.seed_num is None:
-        #    self.seed = self.controller.storage.get_pending_seed()
-        # else:
-        #    self.seed = self.controller.get_seed(self.seed_num)
-
-        # self.num_pages=int(self.num_words/4)
 
    def run(self):
         args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_index": self.bip85_index}
 
-        ##
+
         destination = Destination(BIP85SeedWordsView, view_args={"seed_num": self.seed_num, "page_index": 0, "num_words": self.num_words,
                                    "bip85_index": self.bip85_index}, skip_current_view=True,  # Prevent going BACK to WarningViews
         )
@@ -576,6 +570,10 @@ class BIP85SeedWordsView(View):
         NEXT = "Next"
         DONE = "Done"
 
+        words_per_page = 4  # TODO: eventually make this configurable for bigger screens?
+
+        mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
+        words = mnemonic[self.page_index * words_per_page:(self.page_index + 1) * words_per_page]
 
         button_data = []
         if self.page_index < self.num_pages - 1 or self.seed_num is None:
@@ -583,12 +581,20 @@ class BIP85SeedWordsView(View):
         else:
             button_data.append(DONE)
 
+        # Don't need this now
         # Store the current word number and the index number selected
-        self.seed.bip85_num_words = self.num_words
-        self.seed.bip85_index = self.bip85_index
+        #self.seed.bip85_num_words = self.num_words
+        #self.seed.bip85_index = self.bip85_index
 
-        selected_menu_num = seed_screens.BIP85SeedWordsScreen(
-            seed=self.seed,
+        button_data = []
+        if self.page_index < self.num_pages - 1 or self.seed_num is None:
+            button_data.append(NEXT)
+        else:
+            button_data.append(DONE)
+
+        selected_menu_num = seed_screens.SeedWordsScreen(
+            title=f"BIP-85: Words: {self.page_index + 1}/{self.num_pages}",
+            words=words,
             page_index=self.page_index,
             num_pages=self.num_pages,
             button_data=button_data,
@@ -722,7 +728,7 @@ class SeedExportXpubCustomDerivationView(View):
 
     def run(self):
         ret = seed_screens.SeedExportXpubCustomDerivationScreen(
-            derivation_path=self.custom_derivation_path
+            initial_value=self.custom_derivation_path,
         ).display()
 
         if ret == RET_CODE__BACK_BUTTON:
@@ -986,6 +992,12 @@ class SeedWordsView(View):
         NEXT = "Next"
         DONE = "Done"
 
+        # Slice the mnemonic to our current 4-word section
+        words_per_page = 4  # TODO: eventually make this configurable for bigger screens?
+
+        mnemonic = self.seed.mnemonic_display_list
+        words = mnemonic[self.page_index*words_per_page:(self.page_index + 1)*words_per_page]
+
         button_data = []
         if self.page_index < self.num_pages - 1 or self.seed_num is None:
             button_data.append(NEXT)
@@ -993,7 +1005,8 @@ class SeedWordsView(View):
             button_data.append(DONE)
 
         selected_menu_num = seed_screens.SeedWordsScreen(
-            seed=self.seed,
+            title=f"Seed Words: {self.page_index+1}/{self.num_pages}",
+            words=words,
             page_index=self.page_index,
             num_pages=self.num_pages,
             button_data=button_data,
