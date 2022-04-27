@@ -1,5 +1,4 @@
 import unicodedata
-import embit
 
 from binascii import hexlify
 from embit import bip39, bip32
@@ -9,13 +8,16 @@ from typing import List
 from seedsigner.helpers.bip85 import hmac_sha512
 from seedsigner.models.settings import SettingsConstants
 
+
+
 class InvalidSeedException(Exception):
     pass
+
+
 
 class Seed:
     def __init__(self,
                  mnemonic: List[str] = None,
-                 bip85_seed: List[str] = None,
                  passphrase: str = "",
                  wordlist_language_code: str = SettingsConstants.WORDLIST_LANGUAGE__ENGLISH) -> None:
         self.wordlist_language_code = wordlist_language_code
@@ -29,6 +31,7 @@ class Seed:
 
         self.seed_bytes: bytes = None
         self._generate_seed()
+
 
     @staticmethod
     def get_wordlist(wordlist_language_code: str = SettingsConstants.WORDLIST_LANGUAGE__ENGLISH) -> List[str]:
@@ -51,6 +54,7 @@ class Seed:
     def mnemonic_str(self) -> str:
         return " ".join(self._mnemonic)
     
+
     @property
     def mnemonic_list(self) -> List[str]:
         return self._mnemonic
@@ -102,7 +106,6 @@ class Seed:
     def get_fingerprint(self, network: str = SettingsConstants.MAINNET) -> str:
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
         return hexlify(root.child(0).fingerprint).decode('utf-8')
-
 
     def get_xpub(self, wallet_path: str = '/', network: str = SettingsConstants.MAINNET):
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])

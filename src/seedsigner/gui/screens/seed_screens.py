@@ -21,6 +21,8 @@ from ..components import (Button, FontAwesomeIconConstants, Fonts, FormattedAddr
 from seedsigner.gui.keyboard import Keyboard, TextEntryDisplay
 from seedsigner.hardware.buttons import HardwareButtons, HardwareButtonsConstants
 
+
+
 @dataclass
 class SeedMnemonicEntryScreen(BaseTopNavScreen):
     initial_letters: list = None
