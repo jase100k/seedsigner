@@ -29,10 +29,6 @@ class Seed:
 
         self.seed_bytes: bytes = None
         self._generate_seed()
-        self._bip85_seed: List[str] = ""
-        self.bip85_index: int = 0
-        self.bip85_num_words: int = 12
-
 
     @staticmethod
     def get_wordlist(wordlist_language_code: str = SettingsConstants.WORDLIST_LANGUAGE__ENGLISH) -> List[str]:
@@ -68,14 +64,6 @@ class Seed:
     @property
     def mnemonic_display_list(self) -> List[str]:
         return unicodedata.normalize("NFC", " ".join(self._mnemonic)).split()
-
-    @property
-    def bip85_seed_display_list(self) -> List[str]:
-        return unicodedata.normalize("NFC", " ".join(self._bip85_seed)).split()
-    
-    #@property
-    #def bip85_seed(self):
-    #    return self._bip85_seed
 
 
     @property
@@ -114,23 +102,21 @@ class Seed:
     def get_fingerprint(self, network: str = SettingsConstants.MAINNET) -> str:
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
         return hexlify(root.child(0).fingerprint).decode('utf-8')
-        
+
+
     def get_xpub(self, wallet_path: str = '/', network: str = SettingsConstants.MAINNET):
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
         xprv = root.derive(wallet_path)
         xpub = xprv.to_public()
         return xpub
 
+
     # Derives a BIP85 mnemonic (seed word) from the master seed words using embit functions
     def get_bip85_child_mnemonic(self, bip85_index: int, bip85_num_words: int, network: str = SettingsConstants.MAINNET):
         passphrase = self._passphrase
-        # language = 'english'
-        # lang_code = 0
-        # Need to add language later for path, defaults to English (0)
+        # TODO: Support other bip-39 wordlist languages!
         path = "m/83696968'/39'/0'/{bip85_num_words}'/{bip85_index}'".format(bip85_num_words=bip85_num_words,
                                                                              bip85_index=bip85_index)
-        #seed = bip39.mnemonic_to_seed(self.mnemonic_str, password=self._passphrase, wordlist=self.wordlist)
-        # xprv = embit.bip32.HDKey.from_seed(seed)
         root = bip32.HDKey.from_seed(self.seed_bytes, version=NETWORKS[SettingsConstants.map_network_to_embit(network)]["xprv"])
 
         # Derive k
