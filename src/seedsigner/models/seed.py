@@ -19,7 +19,9 @@ class Seed:
     def __init__(self,
                  mnemonic: List[str] = None,
                  passphrase: str = "",
-                 wordlist_language_code: str = SettingsConstants.WORDLIST_LANGUAGE__ENGLISH) -> None:
+                 wordlist_language_code: str = SettingsConstants.WORDLIST_LANGUAGE__ENGLISH,
+                 is_child: int = None) -> None:
+
         self.wordlist_language_code = wordlist_language_code
 
         if not mnemonic:
@@ -31,6 +33,9 @@ class Seed:
 
         self.seed_bytes: bytes = None
         self._generate_seed()
+        self.is_child = is_child
+        #print("Seed: is_child:" + str(is_child))
+        #print("Seed: self.is_child:" + str(self.is_child))
 
 
     @staticmethod
