@@ -520,11 +520,18 @@ class BIP85ChildSeedIndexView(View):
         # ret should be the bip85_index let's convert to int
         self.bip85_index = int(ret)
 
+#        return Destination(
+#            BIP85ChildSeedWarningView,
+#            view_args={"seed_num": self.seed_num, "num_words": self.num_words,
+#                       "bip85_index": self.bip85_index}
+#                    )
+
         return Destination(
-            BIP85ChildSeedWarningView,
+            BIP85SeedWordsFinaliseView,
             view_args={"seed_num": self.seed_num, "num_words": self.num_words,
                        "bip85_index": self.bip85_index}
                     )
+
 
 class BIP85ChildSeedWarningView(View):
    def __init__(self, seed_num: int, num_words: int, bip85_index: int):
@@ -636,7 +643,43 @@ class BIP85SeedWordsView(View):
             else:
                 return Destination(SeedFinalizeView)
 
+class BIP85SeedWordsFinaliseView(View):
+    def __init__(self, seed_num: int, num_words: int, bip85_index: int, page_index: int = 0):
+        super().__init__()
+        self.seed_num = seed_num
+        self.num_words = num_words
+        self.page_index = page_index
+        self.bip85_index = bip85_index
+        if self.seed_num is None:
+            self.seed = self.controller.storage.get_pending_seed()
+        else:
+            self.seed = self.controller.get_seed(self.seed_num)
 
+        #self.num_pages=int(self.num_words/4)
+
+    def run(self):
+        args = {"seed_num": self.seed_num, "page_index": self.page_index, "num_words": self.num_words, "bip85_index": self.bip85_index}
+
+
+        mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
+
+        wordlist_language_code = self.settings.get_value(SettingsConstants.SETTING__WORDLIST_LANGUAGE)
+        is_child = self.bip85_index
+        from .seed_views import SeedFinalizeView
+
+        self.controller.storage.set_pending_seed(
+            Seed(mnemonic=mnemonic, wordlist_language_code=wordlist_language_code, is_child=is_child)
+        )
+        child_seed = self.controller.storage.get_pending_seed()
+        child_seed.is_child = self.bip85_index
+        print("mnemonic= " + child_seed.mnemonic_str)
+        print("self.seed.is_child = " + str(child_seed.is_child))
+        print("is_child = " + str(is_child))
+        if self.settings.get_value(SettingsConstants.SETTING__PASSPHRASE) == SettingsConstants.OPTION__REQUIRED:
+            from seedsigner.views.seed_views import SeedAddPassphraseView
+            return Destination(SeedAddPassphraseView)
+        else:
+            return Destination(SeedFinalizeView)
 
 
 class SeedBackupView(View):
