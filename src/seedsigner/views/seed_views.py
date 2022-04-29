@@ -37,7 +37,8 @@ class SeedsMenuView(View):
             self.seeds.append({
                 "fingerprint": seed.get_fingerprint(self.settings.get_value(SettingsConstants.SETTING__NETWORK)),
                 "has_passphrase": seed.passphrase is not None,
-                "is_child": seed.is_child
+                "is_child": seed.is_child,
+                "num_words": len(seed.mnemonic_list)
             })
 
 
@@ -48,9 +49,13 @@ class SeedsMenuView(View):
 
         button_data = []
         for seed in self.seeds:
-            print("seed[is_child] = " + str(seed["is_child"]))
             if seed["is_child"] is not None:
-                button_data.append((seed["fingerprint"] + " (" + str(seed["is_child"]) + ")", SeedSignerCustomIconConstants.FINGERPRINT, "yellow"))
+
+                button_data.append(("{fingerprint} ({words}/{index})".format(
+                    fingerprint=seed["fingerprint"],
+                    words=seed["num_words"],
+                    index=str(seed["is_child"])),
+                    SeedSignerCustomIconConstants.FINGERPRINT, "yellow"))
             else:
                 button_data.append((seed["fingerprint"], SeedSignerCustomIconConstants.FINGERPRINT, "blue"))
         button_data.append("Load a seed")
@@ -213,13 +218,16 @@ class SeedFinalizeView(View):
         self.seed = self.controller.storage.get_pending_seed()
         self.fingerprint = self.seed.get_fingerprint(network=self.settings.get_value(SettingsConstants.SETTING__NETWORK))
 
-
     def run(self):
         FINALIZE = "Done"
         PASSPHRASE = ("Add Passphrase", FontAwesomeIconConstants.LOCK)
         button_data = []
 
         button_data.append(FINALIZE)
+        if self.seed.is_child is None:
+            icon_color = "blue"
+        else:
+            icon_color = "yellow"
 
         if self.settings.get_value(SettingsConstants.SETTING__PASSPHRASE) != SettingsConstants.OPTION__DISABLED:
             button_data.append(PASSPHRASE)
@@ -227,6 +235,7 @@ class SeedFinalizeView(View):
         selected_menu_num = seed_screens.SeedFinalizeScreen(
             fingerprint=self.fingerprint,
             button_data=button_data,
+            icon_color=icon_color,
         ).display()
 
         if button_data[selected_menu_num] == FINALIZE:
@@ -396,10 +405,15 @@ class SeedOptionsView(View):
         button_data.append(BACKUP)
         button_data.append(DISCARD)
 
+        if self.seed.is_child is None:
+            icon_color = "blue"
+        else:
+            icon_color = "yellow"
         selected_menu_num = seed_screens.SeedOptionsScreen(
             button_data=button_data,
             fingerprint=self.seed.get_fingerprint(self.settings.get_value(SettingsConstants.SETTING__NETWORK)),
-            has_passphrase=self.seed.passphrase is not None
+            has_passphrase=self.seed.passphrase is not None,
+            icon_color=icon_color
         ).display()
 
         if selected_menu_num == RET_CODE__BACK_BUTTON:
@@ -525,138 +539,12 @@ class BIP85SeedWordsFinaliseView(View):
         )
         child_seed = self.controller.storage.get_pending_seed()
         child_seed.is_child = self.bip85_index
-        print("mnemonic= " + child_seed.mnemonic_str)
-        print("self.seed.is_child = " + str(child_seed.is_child))
-        print("is_child = " + str(is_child))
+
         if self.settings.get_value(SettingsConstants.SETTING__PASSPHRASE) == SettingsConstants.OPTION__REQUIRED:
             from seedsigner.views.seed_views import SeedAddPassphraseView
             return Destination(SeedAddPassphraseView)
         else:
             return Destination(SeedFinalizeView)
-
-# Not used anymore
-class BIP85ChildSeedConfirmView(View):
-    def __init__(self, seed_num: int, num_words: int, bip85_index: int):
-        super().__init__()
-        self.seed_num = seed_num
-        self.num_words = num_words
-        self.bip85_index = bip85_index
-
-    def run(self):
-        args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_index": self.bip85_index}
-
-        VIEW = "View Seed Words"
-        SAVE = "Save Seed"
-
-        button_data = [
-            VIEW,
-            SAVE,
-        ]
-
-        selected_menu_num = ButtonListScreen(
-            title="BIP-85 Child Seed",
-            is_button_text_centered=False,
-            button_data=button_data
-        ).display()
-
-        if selected_menu_num == RET_CODE__BACK_BUTTON:
-            return Destination(BackStackView)
-
-        if button_data[selected_menu_num] == VIEW:
-            return Destination(
-                BIP85ChildSeedWarningView,
-                    view_args={"seed_num": self.seed_num, "num_words": self.num_words,
-                   "bip85_index": self.bip85_index}
-                )
-        elif button_data[selected_menu_num] == SAVE:
-            return Destination(
-                BIP85SeedWordsFinaliseView,
-                view_args={"seed_num": self.seed_num, "num_words": self.num_words,
-                           "bip85_index": self.bip85_index}
-                )
-
-# Not used anymore
-class BIP85ChildSeedWarningView(View):
-   def __init__(self, seed_num: int, num_words: int, bip85_index: int):
-        super().__init__()
-        self.seed_num = seed_num
-        self.num_words = num_words
-        self.bip85_index = bip85_index
-
-   def run(self):
-        args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_index": self.bip85_index}
-
-
-        destination = Destination(BIP85SeedWordsView, view_args={"seed_num": self.seed_num, "page_index": 0, "num_words": self.num_words,
-                                   "bip85_index": self.bip85_index}, skip_current_view=True,  # Prevent going BACK to WarningViews
-        )
-
-        if self.settings.get_value(SettingsConstants.SETTING__DIRE_WARNINGS) == SettingsConstants.OPTION__DISABLED:
-            # Forward straight to showing the words
-            return destination
-
-        selected_menu_num = DireWarningScreen(
-            text="""You must keep your seed words private & away from all online devices.""",
-        ).display()
-
-        if selected_menu_num == 0:
-            # User clicked "I Understand"
-            return destination
-
-        elif selected_menu_num == RET_CODE__BACK_BUTTON:
-            return Destination(BackStackView)
-
-# Not used anymore
-class BIP85SeedWordsView(View):
-    def __init__(self, seed_num: int, num_words: int, bip85_index: int, page_index: int = 0):
-        super().__init__()
-        self.seed_num = seed_num
-        self.num_words = num_words
-        self.page_index = page_index
-        self.bip85_index = bip85_index
-        if self.seed_num is None:
-            self.seed = self.controller.storage.get_pending_seed()
-        else:
-            self.seed = self.controller.get_seed(self.seed_num)
-
-    def run(self):
-        args = {"seed_num": self.seed_num, "page_index": self.page_index, "num_words": self.num_words, "bip85_index": self.bip85_index}
-
-        NEXT = "Next"
-        DONE = "Done"
-
-        words_per_page = 4  # TODO: eventually make this configurable for bigger screens?
-        mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
-        words = mnemonic[self.page_index * words_per_page:(self.page_index + 1) * words_per_page]
-        self.num_pages = int(len(mnemonic) / words_per_page)
-
-        button_data = []
-        if self.page_index < self.num_pages - 1 or self.seed_num is None:
-            button_data.append(NEXT)
-        else:
-            button_data.append(DONE)
-
-        selected_menu_num = seed_screens.SeedWordsScreen(
-            title=f"BIP-85: Words: {self.page_index + 1}/{self.num_pages}",
-            words=words,
-            page_index=self.page_index,
-            num_pages=self.num_pages,
-            button_data=button_data,
-
-        ).display()
-
-        if selected_menu_num == RET_CODE__BACK_BUTTON:
-            return Destination(BackStackView)
-
-        if button_data[selected_menu_num] == NEXT:
-            if self.seed_num is None and self.page_index == self.num_pages - 1:
-                return Destination(SeedFinalizeView)
-            else:
-                return Destination(BIP85SeedWordsView, view_args={"seed_num": self.seed_num, "page_index": self.page_index + 1, "num_words": self.num_words, "bip85_index": self.bip85_index})
-
-        elif button_data[selected_menu_num] == DONE:
-            # Must clear history to avoid BACK button returning to private info
-            return Destination(SeedOptionsView, view_args={"seed_num": self.seed_num}, clear_history=True)
 
 
 class SeedBackupView(View):

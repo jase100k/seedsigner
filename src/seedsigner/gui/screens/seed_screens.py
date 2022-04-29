@@ -413,6 +413,7 @@ class SeedFinalizeScreen(ButtonListScreen):
     title: str = "Finalize Seed"
     is_bottom_list: bool = True
     button_data: list = None
+    icon_color: str = "blue"
 
     def __post_init__(self):
         self.show_back_button = False
@@ -421,7 +422,7 @@ class SeedFinalizeScreen(ButtonListScreen):
 
         self.fingerprint_icontl = IconTextLine(
             icon_name=SeedSignerCustomIconConstants.FINGERPRINT,
-            icon_color="blue",
+            icon_color=self.icon_color,
             icon_size=GUIConstants.ICON_FONT_SIZE + 12,
             label_text="fingerprint",
             value_text=self.fingerprint,
@@ -439,10 +440,11 @@ class SeedOptionsScreen(ButtonListScreen):
     is_bottom_list: bool = True
     fingerprint: str = None
     has_passphrase: bool = False
+    icon_color: str = "blue"
 
     def __post_init__(self):
         self.top_nav_icon_name = SeedSignerCustomIconConstants.FINGERPRINT
-        self.top_nav_icon_color = "blue"
+        self.top_nav_icon_color = self.icon_color
         self.title = self.fingerprint
         self.is_button_text_centered = False
         super().__post_init__()

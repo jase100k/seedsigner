@@ -34,8 +34,6 @@ class Seed:
         self.seed_bytes: bytes = None
         self._generate_seed()
         self.is_child = is_child
-        #print("Seed: is_child:" + str(is_child))
-        #print("Seed: self.is_child:" + str(self.is_child))
 
 
     @staticmethod
