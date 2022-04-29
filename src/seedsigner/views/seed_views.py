@@ -500,12 +500,6 @@ class BIP85ChildSeedIndexView(View):
         self.seed_num = seed_num
         self.num_words = num_words
         self.bip85_index = bip85_index
-        #if self.seed_num is None:
-        #    self.seed = self.controller.storage.get_pending_seed()
-        #else:
-        #    self.seed = self.controller.get_seed(self.seed_num)
-
-        #self.num_pages=int(self.num_words/4)
 
     def run(self):
         args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_app_no" : self.bip85_app_no, "bip85_index": self.bip85_index}
@@ -527,10 +521,50 @@ class BIP85ChildSeedIndexView(View):
 #                    )
 
         return Destination(
-            BIP85SeedWordsFinaliseView,
+            BIP85ChildSeedConfirmView,
             view_args={"seed_num": self.seed_num, "num_words": self.num_words,
                        "bip85_index": self.bip85_index}
                     )
+
+class BIP85ChildSeedConfirmView(View):
+    def __init__(self, seed_num: int, num_words: int, bip85_index: int):
+        super().__init__()
+        self.seed_num = seed_num
+        self.num_words = num_words
+        self.bip85_index = bip85_index
+
+    def run(self):
+        args = {"seed_num": self.seed_num, "num_words": self.num_words, "bip85_index": self.bip85_index}
+
+        VIEW = "View Seed Words"
+        SAVE = "Save Seed"
+
+        button_data = [
+            VIEW,
+            SAVE,
+        ]
+
+        selected_menu_num = ButtonListScreen(
+            title="BIP-85 Child Seed",
+            is_button_text_centered=False,
+            button_data=button_data
+        ).display()
+
+        if selected_menu_num == RET_CODE__BACK_BUTTON:
+            return Destination(BackStackView)
+
+        if button_data[selected_menu_num] == VIEW:
+            return Destination(
+                BIP85ChildSeedWarningView,
+                    view_args={"seed_num": self.seed_num, "num_words": self.num_words,
+                   "bip85_index": self.bip85_index}
+                )
+        elif button_data[selected_menu_num] == SAVE:
+            return Destination(
+                BIP85SeedWordsFinaliseView,
+                view_args={"seed_num": self.seed_num, "num_words": self.num_words,
+                           "bip85_index": self.bip85_index}
+                )
 
 
 class BIP85ChildSeedWarningView(View):
@@ -576,30 +610,21 @@ class BIP85SeedWordsView(View):
         else:
             self.seed = self.controller.get_seed(self.seed_num)
 
-        #self.num_pages=int(self.num_words/4)
-
     def run(self):
         args = {"seed_num": self.seed_num, "page_index": self.page_index, "num_words": self.num_words, "bip85_index": self.bip85_index}
 
         NEXT = "Next"
         DONE = "Done"
-        SAVE = "Save"
 
-        words_per_page = 3  # TODO: eventually make this configurable for bigger screens?
+        words_per_page = 4  # TODO: eventually make this configurable for bigger screens?
         mnemonic = self.seed.get_bip85_child_mnemonic(self.bip85_index, self.num_words).split()
         words = mnemonic[self.page_index * words_per_page:(self.page_index + 1) * words_per_page]
         self.num_pages = int(len(mnemonic) / words_per_page)
-
-        # Don't need this now
-        # Store the current word number and the index number selected
-        #self.seed.bip85_num_words = self.num_words
-        #self.seed.bip85_index = self.bip85_index
 
         button_data = []
         if self.page_index < self.num_pages - 1 or self.seed_num is None:
             button_data.append(NEXT)
         else:
-            button_data.append(SAVE)
             button_data.append(DONE)
 
         selected_menu_num = seed_screens.SeedWordsScreen(
@@ -623,25 +648,7 @@ class BIP85SeedWordsView(View):
         elif button_data[selected_menu_num] == DONE:
             # Must clear history to avoid BACK button returning to private info
             return Destination(SeedOptionsView, view_args={"seed_num": self.seed_num}, clear_history=True)
-        elif button_data[selected_menu_num] == SAVE:
-            wordlist_language_code = self.settings.get_value(SettingsConstants.SETTING__WORDLIST_LANGUAGE)
-            is_child = self.bip85_index
-            from .seed_views import SeedFinalizeView
 
-            #BUG: the is_child is not being set to the sending seed.
-            self.controller.storage.set_pending_seed(
-                Seed(mnemonic=mnemonic, wordlist_language_code=wordlist_language_code, is_child=is_child)
-            )
-            child_seed = self.controller.storage.get_pending_seed()
-            child_seed.is_child = self.bip85_index
-            print("mnemonic= " + child_seed.mnemonic_str)
-            print("self.seed.is_child = " + str(child_seed.is_child))
-            print("is_child = " + str(is_child))
-            if self.settings.get_value(SettingsConstants.SETTING__PASSPHRASE) == SettingsConstants.OPTION__REQUIRED:
-                from seedsigner.views.seed_views import SeedAddPassphraseView
-                return Destination(SeedAddPassphraseView)
-            else:
-                return Destination(SeedFinalizeView)
 
 class BIP85SeedWordsFinaliseView(View):
     def __init__(self, seed_num: int, num_words: int, bip85_index: int, page_index: int = 0):
